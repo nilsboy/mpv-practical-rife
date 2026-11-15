@@ -128,11 +128,24 @@ is met for the hardware at hand.
   output frames — the picture becomes choppier rather than lagging.
 * `--untimed` bypasses pacing (offline-quality marathons / benchmarking).
 
+## Publishing a release
+
+```sh
+gh auth login
+bin/upload-release                       # tag derived from snapcraft.yaml (v0.1.0)
+bin/upload-release v0.1.0 --repo OWNER/REPO --title "..." --notes @NOTES.txt
+bin/upload-release --dry-run --repo OWNER/REPO --clobber   # preview the gh calls
+```
+
+Uploads every file in `dist/` (mpv binary, ONNX models, the snap) as release
+assets. An existing release needs `--clobber` for asset re-upload.
+
 ## Layout
 
     rife/          python package (config, backends, VS filter, ONNX export)
     mpv/           rife_video.py (vf_vapoursynth entry) + rife.lua (toggle)
-    bin/rife-mpv   launcher
+    bin/rife-mpv     launcher
+    bin/upload-release  gh-based publisher for dist/ artifacts
     tools/bench.py synthetic-source benchmark
     tests/         config/vsfilter/backends tests + ONNX↔torch parity test
     models/        downloaded Practical-RIFE releases (gitignored)

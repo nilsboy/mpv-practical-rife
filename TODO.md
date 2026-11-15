@@ -8,6 +8,9 @@
       snap/wrappers; bundled mpv, VapourSynth, onnxruntime, OpenVINO,
       both models) — packed at dist/mpv-practical-rife_0.1.0_amd64.snap and verified
       headless with toggle cycles
+- [x] add bin/upload-release: publish all dist/ artifacts (mpv, ONNX,
+      snap) to a GitHub release via gh CLI (tested with --dry-run; needs
+      'gh auth login' + repo remote for a real run)
 - [ ] measure ONNX latency on the real i3-1315U (iGPU via OpenVINO GPU, CPU
       via onnxruntime) with tools/bench.py and pick default
       model/scale/backend accordingly
