@@ -1,0 +1,178 @@
+name: mpv-practical-rife
+base: core24
+version: "0.1.0"
+summary: mpv with realtime Practical-RIFE frame interpolation
+description: |
+  mpv (built with the VapourSynth bridge) wired to Practical-RIFE ONNX
+  models for realtime frame interpolation.
+
+  Playback is accelerated through OpenVINO on Intel integrated GPUs and
+  through onnxruntime (CPU/CUDA) otherwise. Press Ctrl+r during playback to
+  toggle interpolation; `bench` measures achievable interpolation speed:
+
+      mpv-practical-rife.bench --synthetic 1274x714
+
+  Models bundled: RIFE 4.25 and 4.25.lite (hzwer/Practical-RIFE). Override
+  with MPV_RIFE_MODEL=/path/to/model.onnx mpv-practical-rife.rife-mpv ...
+
+confinement: classic
+grade: stable
+license: LGPL-3.0-or-later
+
+apps:
+  rife-mpv:
+    command: wrappers/rife-mpv
+  bench:
+    command: wrappers/bench
+
+parts:
+  vapoursynth:
+    plugin: autotools
+    source: https://github.com/vapoursynth/vapoursynth/archive/refs/tags/R66.tar.gz
+    autotools-configure-parameters:
+      - --prefix=/usr/local
+    build-packages:
+      - autoconf
+      - automake
+      - libtool
+      - pkg-config
+      - build-essential
+      - python3-dev
+      - cython3
+      - libzimg-dev
+    override-build: |
+      craftctl default
+      # Move the python binding next to the pip-managed site-packages.
+      if [ -d "${CRAFT_PART_INSTALL}/usr/local/lib/python3.12/site-packages" ]; then
+        mkdir -p "${CRAFT_PART_INSTALL}/lib/python3.12"
+        mv "${CRAFT_PART_INSTALL}/usr/local/lib/python3.12/site-packages" \
+           "${CRAFT_PART_INSTALL}/lib/python3.12/"
+        rmdir --ignore-fail-on-non-empty -p "${CRAFT_PART_INSTALL}/usr/local/lib/python3.12" || true
+      fi
+
+  mpv:
+    after: [vapoursynth]
+    plugin: meson
+    source: https://github.com/mpv-player/mpv/archive/refs/tags/v0.40.0.tar.gz
+    build-environment:
+      - PKG_CONFIG_PATH: "${CRAFT_STAGE}/usr/local/lib/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig"
+      - LD_LIBRARY_PATH: "${CRAFT_STAGE}/usr/local/lib:/usr/lib/x86_64-linux-gnu"
+    meson-parameters:
+      - --prefix=/usr/local
+      - --buildtype=release
+      - -Dvapoursynth=enabled
+      - -Dlua=enabled
+    build-packages:
+      - meson
+      - ninja-build
+      - pkg-config
+      - nasm
+      - build-essential
+      - python3-dev
+      - libluajit-5.1-dev
+      - libuchardet-dev
+      - libmujs-dev
+      - libplacebo-dev
+      - libass-dev
+      - libavcodec-dev
+      - libavdevice-dev
+      - libavfilter-dev
+      - libavformat-dev
+      - libavutil-dev
+      - libswresample-dev
+      - libswscale-dev
+      - libpostproc-dev
+      - libdrm-dev
+      - libegl-dev
+      - libgbm-dev
+      - libgl-dev
+      - libgles-dev
+      - libglx-dev
+      - libx11-dev
+      - libxcb1-dev
+      - libxext-dev
+      - libxinerama-dev
+      - libxpresent-dev
+      - libxrandr-dev
+      - libxss-dev
+      - libxv-dev
+      - libxkbcommon-dev
+      - libwayland-dev
+      - libdecor-0-dev
+      - libva-dev
+      - libvdpau-dev
+      - libbluray-dev
+      - libcdio-dev
+      - libcdio-paranoia-dev
+      - libdvdnav-dev
+      - libdvdread-dev
+      - libarchive-dev
+      - libcaca-dev
+      - liblcms2-dev
+      - librubberband-dev
+      - libsamplerate0-dev
+      - libasound2-dev
+      - libpulse-dev
+      - libpipewire-0.3-dev
+      - libjack-dev
+      - libsdl2-dev
+      - libsixel-dev
+      - libzimg-dev
+      - libfontconfig-dev
+      - libfreetype-dev
+      - libfribidi-dev
+      - libharfbuzz-dev
+      - libjpeg-dev
+      - libpng-dev
+      - zlib1g-dev
+      - libvulkan-dev
+      - libspirv-cross-c-shared-dev
+      - libdbus-1-dev
+    override-build: |
+      craftctl default
+      mkdir -p "${CRAFT_PART_INSTALL}/usr/bin"
+      bin_src="$(find "${CRAFT_PART_INSTALL}" -type f -name mpv -not -path '*/share/*' -not -path '*/etc/*' | head -1)"
+      if [ -n "$bin_src" ] && [ "${bin_src}" != "${CRAFT_PART_INSTALL}/usr/bin/mpv" ]; then
+        mv "${bin_src}" "${CRAFT_PART_INSTALL}/usr/bin/mpv"
+      fi
+      test -x "${CRAFT_PART_INSTALL}/usr/bin/mpv"
+
+  python-runtime:
+    after: [vapoursynth]
+    plugin: nil
+    build-packages:
+      - python3-pip
+      - python3-dev
+    override-build: |
+      craftctl default
+      SITE="${CRAFT_PART_INSTALL}/lib/python3.12/site-packages"
+      mkdir -p "${SITE}"
+      pip3 install --no-cache-dir --target="${SITE}" numpy onnxruntime openvino
+      # Drop C/entrypoint clutter that only applies to a venv-style payload.
+      rm -rf "${SITE}/bin"
+
+  models:
+    plugin: dump
+    source: snap/models
+    organize:
+      rife-4.25-s1.0.onnx: models/rife-4.25-s1.0.onnx
+      rife-4.25-lite-s1.0.onnx: models/rife-4.25-lite-s1.0.onnx
+
+  wrappers:
+    plugin: dump
+    source: snap/wrappers
+    organize:
+      rife-mpv: wrappers/rife-mpv
+      bench: wrappers/bench
+    override-build: |
+      craftctl default
+      find "${CRAFT_PART_INSTALL}" -type f \( -name 'rife-mpv' -o -name 'bench' \) -exec chmod +x {} +
+
+  project-files:
+    plugin: dump
+    source: .
+    override-build: |
+      craftctl default
+      cd "${CRAFT_PART_INSTALL}"
+      rm -rf tests install.sh snapcraft.yaml AGENTS.md NOTES.md README.md TODO.md dist tmp snap .git .gitignore
+      find . -maxdepth 1 \( -name '*.mkv' -o -name '*.mp4' -o -name '*.avi' -o -name '*.webm' -o -name '*.zip' -o -name '*.snap' \) -delete

@@ -1,0 +1,10 @@
+tmp/
+/dist/
+/models/
+__pycache__/
+*.onnx
+!snap/models/*.onnx
+*.pyc
+.venv/
+/core
+*.coredump

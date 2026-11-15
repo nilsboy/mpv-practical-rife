@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# rife-mpv: watch videos with Practical-RIFE frame interpolation.
+#
+# Usage: rife-mpv [file] [extra mpv args...]
+# Configuration via MPV_RIFE_* environment variables (see README.md), e.g.:
+#   MPV_RIFE_MODEL=~/rife/yourmodel-s1.0.onnx \
+#   MPV_RIFE_BACKEND=auto rife-mpv movie.mkv
+
+set -e
+
+MPV_RIFE_AUTOSTART=${MPV_RIFE_AUTOSTART:-1}
+export MPV_RIFE_AUTOSTART
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+exec mpv --script="$SCRIPT_DIR/../mpv/rife.lua" "$@"

@@ -1,0 +1,13 @@
+#!/bin/sh
+# Launch mpv wired to the bundled Practical-RIFE interpolation stack.
+#
+# - $SNAP/usr/local/lib holds libvapoursynth* built for this snap
+# - $SNAP/lib/python3.12/site-packages holds the VapourSynth python
+#   bindings plus numpy / onnxruntime / openvino
+# - models default to the bundled RIFE release; override with MPV_RIFE_MODEL
+
+export LD_LIBRARY_PATH="${SNAP}/usr/local/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+export PYTHONPATH="${SNAP}/lib/python3.12/site-packages${PYTHONPATH:+:${PYTHONPATH}}"
+export MPV_RIFE_MODEL="${MPV_RIFE_MODEL:-${SNAP}/models/rife-4.25-lite-s1.0.onnx}"
+
+exec "${SNAP}/usr/bin/mpv" --script="${SNAP}/mpv/rife.lua" "$@"

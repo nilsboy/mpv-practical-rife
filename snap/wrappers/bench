@@ -1,0 +1,15 @@
+#!/bin/sh
+# Benchmark interpolation throughput with this snap's python runtime.
+#
+#   mpv-practical-rife.bench --synthetic 1274x714
+#   mpv-practical-rife.bench --model /path/model.onnx --synthetic 1280x768 --frames 30
+
+export LD_LIBRARY_PATH="${SNAP}/usr/local/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+export PYTHONPATH="${SNAP}/lib/python3.12/site-packages${PYTHONPATH:+:${PYTHONPATH}}"
+
+case "$*" in
+    *--model*) ;;
+    *) set -- --model "${SNAP}/models/rife-4.25-lite-s1.0.onnx" "$@" ;;
+esac
+
+exec python3 "${SNAP}/tools/bench.py" "$@"
