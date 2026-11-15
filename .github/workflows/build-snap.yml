@@ -1,0 +1,87 @@
+name: build-snap
+
+on:
+  push:
+    branches: [master]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+concurrency:
+  group: build-snap-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Pack mpv-practical-rife snap
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install snapcraft and LXD
+        run: |
+          sudo snap install snapcraft --classic
+          sudo snap install lxd
+          sudo lxd init --auto
+
+      - name: Pack the snap
+        run: sudo snapcraft pack
+
+      - name: Smoke-test the snap (headless interpolation)
+        run: |
+          sudo snap install --dangerous --classic ./*.snap
+          mpv-practical-rife.bench --synthetic 320x256 --frames 3 --warmup 1 | tee bench.log || true
+          grep -q "values" bench.log
+          snap list mpv-practical-rife
+
+      - name: Upload snap artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mpv-practical-rife-snap
+          path: ./*.snap
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub release
+    needs: build
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mpv-practical-rife-snap
+          path: release-files/
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REF: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          SHA: ${{ github.sha }}
+        run: |
+          # v* tag pushes: an exact release with generated notes.
+          # master pushes: replace the rolling "latest" prerelease snapshot.
+          if [ "$REF_TYPE" = "tag" ]; then
+            gh release create "$REF" release-files/* \
+              --repo "${GITHUB_REPOSITORY}" \
+              --title "$REF" \
+              --generate-notes \
+            || gh release upload "$REF" release-files/* \
+              --repo "${GITHUB_REPOSITORY}" \
+              --clobber
+          else
+            gh release delete latest --yes \
+              --repo "${GITHUB_REPOSITORY}" \
+              --cleanup-tag || true
+            gh release create latest release-files/* \
+              --repo "${GITHUB_REPOSITORY}" \
+              --target "$SHA" \
+              --title "Latest snapshot (automated)" \
+              --prerelease \
+              --notes "Automated snapshot of ${GITHUB_REPOSITORY}@${SHA}, built by build-snap.yml (run ${GITHUB_RUN_ID}). Replaced on every push."
+          fi

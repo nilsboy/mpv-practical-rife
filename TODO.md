@@ -8,9 +8,14 @@
       snap/wrappers; bundled mpv, VapourSynth, onnxruntime, OpenVINO,
       both models) — packed at dist/mpv-practical-rife_0.1.0_amd64.snap and verified
       headless with toggle cycles
-- [x] add bin/upload-release: publish all dist/ artifacts (mpv, ONNX,
-      snap) to a GitHub release via gh CLI (tested with --dry-run; needs
-      'gh auth login' + repo remote for a real run)
+- [x] add a GitHub Action building the snap (build-snap.yml: checkout,
+      snapcraft+LXD install, pack, headless bench smoke test, artifact
+      upload, validated with actionlint+shellcheck and contract tests)
+- [x] publish releases from the workflow: `release` job (needs: build)
+      publishes on EVERY push to master as a rolling `latest` prerelease
+      snapshot (delete tag+release, recreate at pushed commit), and as an
+      exact release with generated notes on v* tags (--clobber fallback);
+      bin/upload-release removed; publish script covered by stubbed-gh tests
 - [ ] measure ONNX latency on the real i3-1315U (iGPU via OpenVINO GPU, CPU
       via onnxruntime) with tools/bench.py and pick default
       model/scale/backend accordingly

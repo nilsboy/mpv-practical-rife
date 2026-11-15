@@ -128,24 +128,34 @@ is met for the hardware at hand.
   output frames — the picture becomes choppier rather than lagging.
 * `--untimed` bypasses pacing (offline-quality marathons / benchmarking).
 
-## Publishing a release
+## CI
+
+`.github/workflows/build-snap.yml` packs the snap on every push/PR
+(`ubuntu-24.04` runner, LXD-backed `snapcraft pack`), smoke-tests it headless
+(`bench` interpolation + `snap list`), and uploads the `.snap` as a workflow
+artifact.
+
+Every **push** publishes a GitHub release (no secrets needed — the default
+`GITHUB_TOKEN` covers it):
+
+* push to `master` → replaces the rolling **`latest` prerelease** snapshot
+  with the freshly built snap (tag recreated at the pushed commit)
+* push of a `v*` tag → creates an **exact release** with generated notes
+  (`gh release upload --clobber` on re-pushed tags)
+* PR and manual builds → artifact only, no release
+
+To publish a version: bump `version:` in `snapcraft.yaml`, commit, and push
+its tag:
 
 ```sh
-gh auth login
-bin/upload-release                       # tag derived from snapcraft.yaml (v0.1.0)
-bin/upload-release v0.1.0 --repo OWNER/REPO --title "..." --notes @NOTES.txt
-bin/upload-release --dry-run --repo OWNER/REPO --clobber   # preview the gh calls
+git tag v0.1.0 && git push origin v0.1.0
 ```
-
-Uploads every file in `dist/` (mpv binary, ONNX models, the snap) as release
-assets. An existing release needs `--clobber` for asset re-upload.
 
 ## Layout
 
     rife/          python package (config, backends, VS filter, ONNX export)
     mpv/           rife_video.py (vf_vapoursynth entry) + rife.lua (toggle)
     bin/rife-mpv     launcher
-    bin/upload-release  gh-based publisher for dist/ artifacts
     tools/bench.py synthetic-source benchmark
     tests/         config/vsfilter/backends tests + ONNX↔torch parity test
     models/        downloaded Practical-RIFE releases (gitignored)
