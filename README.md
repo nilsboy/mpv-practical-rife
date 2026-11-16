@@ -18,67 +18,45 @@ mpv ──vf_vapoursynth── rife_video.py (VSScript)
 
 ## Requirements
 
-* Linux. Ubuntu 24.04 was used for development.
-* `mpv` compiled with `--enable-vapoursynth` (Ubuntu's stock mpv does
-  **not** ship it; use `./install.sh`, which builds VapourSynth R66 + mpv
-  0.40.0 with the filter enabled, or a distro build that has it).
-* VapourSynth R66 (core + python bindings).
-* Python packages: `numpy`, `onnxruntime`, `openvino` (for the iGPU).
-* A Practical-RIFE release (weights + architecture from
-  [the model list](https://github.com/hzwer/Practical-RIFE#trained-model))
-  and `rife/export_ifnet.py` to convert it to ONNX (needs `torch` on CPU).
+* Linux with **snapd** (the `ubuntu-24.04` CI builds on it). Everything else
+  mpv, VapourSynth, numpy/onnxruntime/OpenVINO, the RIFE models — is inside
+  the snap.
+* For hacking on the Python filter code: a system VapourSynth (R66+) plus
+  `numpy`/`onnxruntime` for the test suite.
 
-## Quick start (development repo)
+## Quick start
 
 ```sh
-./install.sh                        # full bootstrap (apt, builds, models)
-MPV_RIFE_MODEL=dist/rife-4.25-lite-s1.0.onnx ./bin/rife-mpv video.mkv
+sudo snap install --dangerous --classic mpv-practical-rife_0.1.0_amd64.snap
+mpv-practical-rife.rife-mpv video.mkv
 ```
 
-During playback press **Ctrl+r** to toggle interpolation.
-
-## Snap
-
-A self-contained classic snap is packaged with `snapcraft.yaml` (base
-core24, classic confinement). It bundles its own mpv + VapourSynth build,
-the Python runtimes (numpy, onnxruntime, **OpenVINO** for Intel iGPU) and
-both RIFE models, so it needs no host setup beyond snapd:
-
-```sh
-snapcraft pack                      # or use dist/mpv-practical-rife_0.1.0_amd64.snap
-sudo snap install --dangerous --classic ./dist/mpv-practical-rife_*.snap
-
-mpv-practical-rife.rife-mpv video.mkv         # Ctrl+r toggles interpolation
-mpv-practical-rife.bench --synthetic 1274x714
-```
-
-Classic confinement is required for the embedded-Python VapourSynth
-pipeline and the host's iGPU OpenCL/VA-API drivers (strict confinement has
-no clean OpenCL story). The snap still exposes all `MPV_RIFE_*` overrides,
-e.g. `MPV_RIFE_MODEL=/path/model.onnx mpv-practical-rife.rife-mpv ...`; the lua
-toggle script reads its config through `--script-opts`/config as usual.
+During playback press **Ctrl+r** to toggle interpolation. Releases carry the
+snap automatically (see CI below); `snapcraft pack` builds one locally.
 
 ## Usage
 
 ```sh
-rife-mpv [--script-opts rife-<opt>=<value> ...] file...
+mpv-practical-rife.rife-mpv [--script-opts rife-<opt>=<value> ...] file...
 ```
 
 The wrapper starts playback with RIFE enabled (`Ctrl+r` still toggles it
-off/on). Without mpv scripting, use the filter directly:
-
-```sh
-mpv --vf='vapoursynth=~/.config/mpv/scripts/rife_video.py:buffered-frames=10:concurrent-frames=2' video.mkv
-```
+off/on). Classic confinement gives it full file/GPU access, and the lua
+toggle script reads its settings from `--script-opts`/config as usual.
 
 ### Settings
 
 Precedence: script-opts/Lua options > `user-data` JSON > `MPV_RIFE_*` env
-> defaults. Long name or short key both work.
+> defaults. Long name or short key both work. The model defaults to the
+snap-bundled `rife-4.25-lite-s1.0.onnx`; override with:
+
+```sh
+MPV_RIFE_MODEL=/path/to/model.onnx mpv-practical-rife.rife-mpv video.mkv
+```
 
 | Env / option      | Key | Default | Meaning |
 |-------------------|-----|---------|---------|
-| `MPV_RIFE_MODEL`  | `m` | — | path to the ONNX model (required) |
+| `MPV_RIFE_MODEL`  | `m` | bundled 4.25.lite | path to the ONNX model |
 | `MPV_RIFE_BACKEND`| `b` | `auto` | `auto` / `ort` / `ov` |
 | `MPV_RIFE_DEVICE` | `d` | auto | e.g. `GPU`, `CPU`, `CUDA` |
 | `MPV_RIFE_THREADS`| `t` | 0 (auto) | intra-op threads for CPU runtimes |
@@ -93,30 +71,15 @@ Precedence: script-opts/Lua options > `user-data` JSON > `MPV_RIFE_*` env
 Lua script options additionally: `autostart`, `buffered_frames`,
 `concurrent_frames`, `script_path`, `vpy`.
 
-`rife.lua` (in `~/.config/mpv/scripts/`) reads the same settings from
-`~/.config/mpv/mpv.conf` under the script section name, e.g.
-`script-opts=rife-model=/abs/path/rife.onnx:...`, or pass them with
-`--script-opts=rife-factor_num=4`.
-
-### Exporting other models
-
-```sh
-python3 -m rife.export_ifnet <train_log_dir> out.onnx [--scale 0.5]
-```
-
-`<train_log_dir>` is the unpacked Practical-RIFE release (contains
-`flownet.pkl`, `RIFE_HDv3.py`, `IFNet_HDv3.py`). `--scale` bakes the optical
-flow resolution factor into the graph (0.5 halves compute; hzwer recommends
-it for 4K).
-
 ### Benchmarking
 
 ```sh
-python3 tools/bench.py --model dist/rife-4.25-lite-s1.0.onnx --synthetic 1274x714
+mpv-practical-rife.bench --synthetic 1274x714
 ```
 
 prints interpolated frames/sec and whether realtime (factor × source fps)
-is met for the hardware at hand.
+is met for the hardware at hand. `--model /path/model.onnx` overrides the
+bundled model.
 
 ### Performance notes (i3-1315U)
 
@@ -153,16 +116,13 @@ git tag v0.1.0 && git push origin v0.1.0
 
 ## Layout
 
-    rife/          python package (config, backends, VS filter, ONNX export)
+    rife/          python package (config, backends, VS filter)
     mpv/           rife_video.py (vf_vapoursynth entry) + rife.lua (toggle)
-    bin/rife-mpv     launcher
-    tools/bench.py synthetic-source benchmark
-    tests/         config/vsfilter/backends tests + ONNX↔torch parity test
-    models/        downloaded Practical-RIFE releases (gitignored)
-    snap/          snap packaging (models, wrappers)
+    snap/          snap packaging (bundled models + entry wrappers)
     snapcraft.yaml classic-snap definition
-    dist/          final artifacts: mpv binary + ONNX + snap (gitignored)
-    install.sh     target-machine bootstrap
+    tools/bench.py synthetic-source benchmark
+    tests/         config/vsfilter tests + workflow contract tests
+    dist/          final artifact: the built snap (gitignored)
     NOTES.md       development notes and implementation details
 
 ## Tests
@@ -171,5 +131,5 @@ git tag v0.1.0 && git push origin v0.1.0
 python3 -m unittest discover -s tests
 ```
 
-Runs 15 tests; the export-parity test needs torch + model weights and is
-skipped otherwise.
+Requires a system VapourSynth plus numpy/onnxruntime; the filter tests run
+against a synthetic blend model, so no RIFE weights are needed.

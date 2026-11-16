@@ -1,6 +1,5 @@
 tmp/
 /dist/
-/models/
 __pycache__/
 *.onnx
 !snap/models/*.onnx

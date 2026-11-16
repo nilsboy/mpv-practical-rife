@@ -16,10 +16,16 @@
       snapshot (delete tag+release, recreate at pushed commit), and as an
       exact release with generated notes on v* tags (--clobber fallback);
       bin/upload-release removed; publish script covered by stubbed-gh tests
+- [x] trim the repo to snap-only: removed install.sh (system mpv/VapourSynth
+      bootstrap), bin/rife-mpv launcher, the torch ONNX exporter
+      (rife/export_ifnet.py, recoverable from git history along with the
+      raw weight downloads) and the parity test; dist/ now holds only the
+      snap; snap remains self-contained (models bundled in snap/models)
 - [ ] measure ONNX latency on the real i3-1315U (iGPU via OpenVINO GPU, CPU
-      via onnxruntime) with tools/bench.py and pick default
+      via onnxruntime) with mpv-practical-rife.bench and pick default
       model/scale/backend accordingly
 - [ ] consider FP16 (OpenVINO GPU) or quantized exports for extra headroom
+      (would require re-adding an exporter from git history)
 - [ ] adaptive quality: drop to scale 0.5 model when mpv reports sustained
       frame drops during playback
 - [ ] optional offline interpolation CLI (rife-cli: input video -> 2x file)

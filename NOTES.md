@@ -3,6 +3,11 @@
 Development notes, decisions and gotchas discovered while building
 mpv-practical-rife.
 
+The repository is snap-only: `snapcraft pack` is the one build step, the
+snap is the only deliverable, and the released `.snap` lives in `dist/`
+(the earlier source-build `install.sh` and standalone mpv/ONNX toolchain
+were trimmed; both are recoverable from git history).
+
 ## Architecture decisions
 
 * **mpv `vf_vapoursynth` is the only sane runtime integration.** mpv cannot
@@ -14,14 +19,15 @@ mpv-practical-rife.
   (onnxruntime C lib + protobuf + onnx) is heavy. Instead the VS filter is
   implemented in pure Python (`rife/vsfilter.py`) on top of pip-installed
   `onnxruntime`/`openvino` — zero compiled plugins.
-* **ONNX export re-implements the v4.x inference graph** (`_ExportableRIFE`
-  in `rife/export_ifnet.py`): it re-plays IFNet's five blocks with the same
-  weights, dropping the flow/mask outputs. The author's own forward cannot
-  be traced because it builds a python list that mixes `(warped0,
-  warped1)` tuples and later a tensor (`merged[4] = ...`), which the
-  TorchScript tracer rejects with "List inputs ... must have consistent
-  element type". Parity with the original is verified (see tests, PSNR ≈
-  109 dB against `RIFE_HDv3.Model.inference`).
+* **ONNX export — historical**: the bundled `snap/models/*.onnx` were
+  produced by a torch-based exporter (`rife/export_ifnet.py`, removed from
+  the repo after the snap-only trim; see git history) that re-implemented
+  the v4.x inference graph with the same weights, dropping the flow/mask
+  outputs. The author's own forward cannot be traced because it builds a
+  python list that mixes `(warped0, warped1)` tuples and later a tensor
+  (`merged[4] = ...`), which the TorchScript tracer rejects with "List
+  inputs ... must have consistent element type". Parity with the original
+  was verified (PSNR ≈ 109 dB against `RIFE_HDv3.Model.inference`).
 * **Warp grid is rebuilt per call** (no python dict caching as in
   warplayer.py) so the traced graph keeps `aten::size→linspace`
   dependencies and stays correct for dynamic input sizes.
@@ -73,8 +79,8 @@ minimal scripts (`tmp/*_test.py` probes during development).
   onnxruntime-CPU paths are fully exercised.
 * Raw CPU interpolation on the 4-thread VM: ≈0.2 interp/s for 4.25 at
   720p+pad. The i3-1315U is substantially faster and the iGPU path is the
-  intended realtime one; use `tools/bench.py` on the target to find the
-  workable resolution/model/scale.
+  intended realtime one; use `mpv-practical-rife.bench` on the target to
+  find the workable resolution/model/scale.
 
 ## Benchmarks (sandbox, 4 threads)
 

@@ -174,5 +174,5 @@ parts:
     override-build: |
       craftctl default
       cd "${CRAFT_PART_INSTALL}"
-      rm -rf tests install.sh snapcraft.yaml AGENTS.md NOTES.md README.md TODO.md dist tmp snap .git .gitignore
+      rm -rf tests snapcraft.yaml AGENTS.md NOTES.md README.md TODO.md dist tmp snap .git .gitignore
       find . -maxdepth 1 \( -name '*.mkv' -o -name '*.mp4' -o -name '*.avi' -o -name '*.webm' -o -name '*.zip' -o -name '*.snap' \) -delete
