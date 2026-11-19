@@ -78,8 +78,8 @@ class BuildSnapWorkflowTests(unittest.TestCase):
     def test_artifact_is_shared_with_release(self):
         build_steps = self.doc["jobs"]["build"]["steps"]
         release_steps = self.doc["jobs"]["release"]["steps"]
-        up = next(s for s in build_steps if s.get("uses") == "actions/upload-artifact@v4")
-        down = next(s for s in release_steps if s.get("uses") == "actions/download-artifact@v4")
+        up = next(s for s in build_steps if s.get("uses") == "actions/upload-artifact@v7")
+        down = next(s for s in release_steps if s.get("uses") == "actions/download-artifact@v8")
         self.assertEqual(up["with"]["name"], ARTIFACT_NAME)
         self.assertEqual(down["with"]["name"], ARTIFACT_NAME)
         self.assertEqual(down["with"]["path"], "release-files/")
@@ -95,7 +95,7 @@ class BuildSnapWorkflowTests(unittest.TestCase):
             [s.get("name") for s in release["steps"] if isinstance(s, dict)],
             ["Download artifact", "Publish release"],
         )
-        down = next(s for s in release["steps"] if s.get("uses") == "actions/download-artifact@v4")
+        down = next(s for s in release["steps"] if s.get("uses") == "actions/download-artifact@v8")
         self.assertEqual(down["with"]["name"], ARTIFACT_NAME)
         self.assertEqual(down["with"]["path"], "release-files/")
 

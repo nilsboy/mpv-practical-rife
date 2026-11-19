@@ -4,6 +4,9 @@
 
 ## New TODOs
 
+- [x] bump workflow action versions off the deprecated Node 20 runtime:
+      checkout@v7 (node24), upload-artifact@v7 (node24),
+      download-artifact@v8 (node24); contract tests follow the pins
 - [x] package the whole stack as a classic core24 snap (snapcraft.yaml +
       snap/wrappers; bundled mpv, VapourSynth, onnxruntime, OpenVINO,
       both models) — packed at dist/mpv-practical-rife_0.1.0_amd64.snap and verified
