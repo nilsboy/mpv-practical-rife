@@ -154,6 +154,19 @@ minimal scripts (`tmp/*_test.py` probes during development).
   project must be clean before packing (`tmp/*.sock` bit us twice).
 * Resulting snap ≈133 MB compressed (mpv+VS ~15 MB, python wheels ~500 MB
   unpacked, OpenVINO dominates).
+* **classic ≠ self-contained by default**: `build-packages` exist only in
+  the LXD build instance; classic snaps stage *nothing* of them. Works on
+  any host that happens to have the libs, but libzimg (VS core
+  dependency) is absent from plain Ubuntu 24.04 — it happened to be
+  installed on this sandbox, so the earlier local verification passed and
+  CI's headless runner caught it on `import vapoursynth`
+  ("libzimg.so.2: cannot open shared object file").
+  `stage-packages: [libzimg2]` on the vapoursynth part + wrapper
+  LD_LIBRARY_PATH entries (`$SNAP/usr/lib/x86_64-linux-gnu`,
+  `$SNAP/lib/x86_64-linux-gnu`) make the VS import host-independent.
+  Remaining host deps (ffmpeg/placelo/ass/… around mpv, libpython for the
+  VS binding) still come from the host; bundling them is tracked in
+  TODO.md.
 * Verified on the target-like sandbox: `mpv-practical-rife.bench` end-to-end plus
   interpolated playback with stable on/off/on toggle cycles, all through
   `/snap/mpv-practical-rife/current` paths.

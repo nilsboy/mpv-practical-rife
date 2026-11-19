@@ -40,6 +40,8 @@ parts:
       - python3-dev
       - cython3
       - libzimg-dev
+    stage-packages:
+      - libzimg2
     override-build: |
       craftctl default
       # Move the python binding next to the pip-managed site-packages.

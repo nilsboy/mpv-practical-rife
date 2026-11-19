@@ -4,7 +4,7 @@
 #   mpv-practical-rife.bench --synthetic 1274x714
 #   mpv-practical-rife.bench --model /path/model.onnx --synthetic 1280x768 --frames 30
 
-export LD_LIBRARY_PATH="${SNAP}/usr/local/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+export LD_LIBRARY_PATH="${SNAP}/usr/local/lib:${SNAP}/usr/lib/x86_64-linux-gnu:${SNAP}/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
 export PYTHONPATH="${SNAP}/lib/python3.12/site-packages${PYTHONPATH:+:${PYTHONPATH}}"
 
 case "$*" in

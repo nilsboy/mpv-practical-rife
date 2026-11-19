@@ -28,6 +28,13 @@
       Docker sets FORWARD policy to DROP) and `lxc network set lxdbr0
       ipv6.address none` (non-routable IPv6); + lxd waitready; contract
       test added, details in NOTES.md
+- [x] fix CI smoke test failing on `import vapoursynth`
+      (libzimg.so.2 missing from the snap on clean hosts: stage
+      `libzimg2` into the vapoursynth part and prepend the staged lib
+      dirs in both wrappers' LD_LIBRARY_PATH; test_snap.py covers it)
+- [ ] stage the mpv/ffmpeg runtime libraries into the snap (stage-packages:
+      libplacebo/ass/ffmpeg/lua/etc.) so `rife-mpv` works on clean Ubuntu
+      24.04 hosts; today classic only resolves them if installed there
 - [ ] measure ONNX latency on the real i3-1315U (iGPU via OpenVINO GPU, CPU
       via onnxruntime) with mpv-practical-rife.bench and pick default
       model/scale/backend accordingly
