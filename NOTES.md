@@ -72,6 +72,23 @@ overwriting their pixels works reliably (this is what
 `rife/vsfilter.py::_InterpState` does). Verified by bisecting against
 minimal scripts (`tmp/*_test.py` probes during development).
 
+## CI (build-snap.yml) networking gotcha
+
+* On GitHub-hosted runners `snapcraft pack` can fail while launching the
+  LXD build instance with "A network related operation failed in a context
+  of no network access." Two independent causes, both fixed in the install
+  step, both after `lxd init --auto` (which creates lxdbr0):
+  - Docker is preinstalled and sets the iptables FORWARD policy to DROP,
+    which swallows all traffic forwarded by lxdbr0 → `sudo iptables -P
+    FORWARD ACCEPT`.
+  - The runner hands the instance a non-routable IPv6 address → `sudo lxc
+    network set lxdbr0 ipv6.address none`.
+* The failure surfaces during "Creating new base instance from remote" and
+  misleadingly implicates the runner's own connectivity, not the
+  container's (same workaround is used, e.g., by canonical/jaime CI).
+* `sudo lxd waitready --timeout=60` before init guards against the just-
+  installed lxd snap daemon not being up yet.
+
 ## Sandbox limitations (dev box)
 
 * No Intel iGPU here (Red Hat Virtio GPU), so the OpenVINO **GPU** path is

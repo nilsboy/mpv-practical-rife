@@ -24,7 +24,18 @@ jobs:
         run: |
           sudo snap install snapcraft --classic
           sudo snap install lxd
+          sudo lxd waitready --timeout=60
           sudo lxd init --auto
+          # GitHub runners ship Docker, which sets the iptables FORWARD
+          # policy to DROP; the LXD bridge forwards through that chain, so
+          # the build instance boots with no outbound network and pack
+          # dies with "A network related operation failed in a context of
+          # no network access". Re-allow forwarding, and drop the
+          # non-routable IPv6 the runner hands the instance (same
+          # symptom). Both must run after `lxd init --auto`, which creates
+          # lxdbr0.
+          sudo iptables -P FORWARD ACCEPT
+          sudo lxc network set lxdbr0 ipv6.address none
 
       - name: Pack the snap
         run: sudo snapcraft pack

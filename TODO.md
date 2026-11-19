@@ -21,6 +21,13 @@
       (rife/export_ifnet.py, recoverable from git history along with the
       raw weight downloads) and the parity test; dist/ now holds only the
       snap; snap remains self-contained (models bundled in snap/models)
+- [x] fix build-snap.yml LXD networking on GitHub runners (pack died at
+      "Creating new base instance from remote" with "A network related
+      operation failed in a context of no network access"): after
+      `lxd init --auto` add `iptables -P FORWARD ACCEPT` (preinstalled
+      Docker sets FORWARD policy to DROP) and `lxc network set lxdbr0
+      ipv6.address none` (non-routable IPv6); + lxd waitready; contract
+      test added, details in NOTES.md
 - [ ] measure ONNX latency on the real i3-1315U (iGPU via OpenVINO GPU, CPU
       via onnxruntime) with mpv-practical-rife.bench and pick default
       model/scale/backend accordingly

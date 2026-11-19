@@ -52,6 +52,22 @@ class BuildSnapWorkflowTests(unittest.TestCase):
             self.assertIn(cmd, install_sh)
         self.assertIn("sudo snapcraft pack", pack_sh)
 
+    def test_lxd_network_reachability_workarounds(self):
+        # GitHub runners ship Docker (FORWARD policy DROP) and hand the
+        # build instance a non-routable IPv6 address; both leave the LXD
+        # instance without outbound network, failing `snapcraft pack` with
+        # "A network related operation failed in a context of no network
+        # access". Both fixes must come after `lxd init --auto`, which
+        # creates lxdbr0.
+        steps = self.doc["jobs"]["build"]["steps"]
+        install_sh = next(s["run"] for s in steps if s.get("name") == "Install snapcraft and LXD")
+        self.assertIn("iptables -P FORWARD ACCEPT", install_sh)
+        self.assertIn("lxc network set lxdbr0 ipv6.address none", install_sh)
+        self.assertLess(
+            install_sh.index("lxd init --auto"),
+            install_sh.index("lxc network set lxdbr0"),
+        )
+
     def test_smoke_test_checks_interpolation(self):
         steps = self.doc["jobs"]["build"]["steps"]
         smoke = next(s["run"] for s in steps if s.get("name") == "Smoke-test the snap (headless interpolation)")
